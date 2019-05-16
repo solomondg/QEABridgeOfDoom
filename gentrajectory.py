@@ -7,15 +7,19 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
+# if we go .3 m/s our robot dies lol fml
 neatoMaxSpeed = 0.299999 * unit.m / unit.s
 neatoMaxAccel = 0.3 * unit.m / (unit.s ** 2)
 
 profileMaxCruiseVel = neatoMaxSpeed * 0.75
 profileMaxAccel = neatoMaxAccel * 0.75
 
+# sympy abuse #1
 pathLength = getLength() * unit.m
-#pathLength = 3.253489154999915 * unit.m
 
+# generate motion profile
+# credit to Tyler Veness (https://tavsys.net/) for helping me with some of the
+# motion profiling logic
 cruiseVelStartTime = profileMaxCruiseVel / profileMaxAccel
 dt = 0.02 * unit.s
 tVec = [0.0 * unit.s]  # timesteps
@@ -54,6 +58,14 @@ while tVec[-1] < timeTotal:
     # print(xVec[-1], vVec[-1], dt, vVec[-1]*dt)
     xVec.append(xVec[-1] + vVec[-1] * dt)
 
+# tVec -> time per point
+# xVec -> distance per point
+# vVec -> velocity per point
+# aVec -> acceleration per point
+
+# e.g. xVec[-1] == pathLength
+
+# this is when I started to regret using Pint
 plt.plot([t.to(unit.s).m for t in tVec], [x.to(unit.m).m for x in xVec])
 plt.plot([t.to(unit.s).m for t in tVec], [v.to(unit.m / unit.s).m for v in vVec])
 plt.plot([t.to(unit.s).m for t in tVec], [a.to(unit.m / unit.s ** 2).m for a in aVec])
@@ -62,16 +74,22 @@ plt.ylabel("Position (m), Velocity (m/s), Acceleration (m/s^2)")
 plt.legend(["Position (m)", "Velocity (m/s)", "Acceleration (m/s^2)"])
 plt.show()
 
+
 v = vVec  # linear velocity
 # w = That x Nhat
 headings = []
 w = []
+
+# Now we need to add the whole angular velocity thing
 for i in tqdm(range(0, len(xVec))):
     # get current x
     # get next x
     # get heading at current x
     # get heading at next x
     # delta
+
+    # Parameterizing from 0 to 1 was a good idea but parameterizing based on
+    # path length would've been a better idea
     percent = xVec[i].to(unit.m).m / pathLength.to(unit.m).m
     #w_ = getW(percent) * 0.235
     w_ = getW(percent) * vVec[i].to(unit.m/unit.s).m
@@ -81,21 +99,14 @@ v = np.asarray([j.to(unit.m / unit.s).m for j in vVec])
 w = np.asarray(w)
 t = np.asarray([t.to(unit.s).m for t in tVec])
 
-# w_fake = []
-# for i in tqdm(range(len(tVec)-1)):
-#    pt_0 = (i+0.0)/(len(tVec)-1)
-#    pt_1 = (i+1.0)/(len(tVec)-1)
-#    th_0 = getTangent(pt_0)
-#    th_1 = getTangent(pt_1)
-#    w_tmp = th_0.rotateBy(th_1.inverse).theta# * dt.to(unit.s).m
-#    w_fake.append(w_tmp)
 
 plt.plot(t, w)
-# plt.plot([t.to(unit.s).m for t in tVec[:-1]], w_fake)
 plt.show()
 
+# determined by spinning the robot. a lot.
 wheelbase = 0.247613
 
+# inverse kinematics
 traj_l = v - w * (wheelbase / 2)
 traj_r = v + w * (wheelbase / 2)
 
@@ -139,6 +150,7 @@ simt = []
 
 dt = dt.to(unit.s).m
 
+# simulate generated trajectory
 for i in range(len(traj_r)):
     a = float((traj_r[i] - traj_l[i]) / wheelbase)
     b = float((traj_l[i] + traj_r[i]) / 2)
@@ -162,6 +174,9 @@ print(getPoint(1.0).x, getPoint(1.0).y)
 
 # Csv format:
 # t, v, w, x, y, theta, lV, rV
+
+
+# Yeet everything to disk
 for i in range(len(tVec)):
     csv += "{0},{1},{2},{3},{4},{5},{6},{7}\n".format(
         tVec[i].to(unit.s).m,                                               # t

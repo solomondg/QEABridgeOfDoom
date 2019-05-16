@@ -103,6 +103,10 @@ plt.show()
 xInterp = sp.interpolate.interp1d(traj[:,0],traj[:,4])
 yInterp = sp.interpolate.interp1d(traj[:,0],traj[:,5])
 
+
+# Calculate total error
+# I'm interpolating the reference trajectory so it's painless to find ref
+# timesteps that match with my robot position point timesteps
 acc = 0
 for i in range(len(log[:,0])-1):
     t = log[i,0]
