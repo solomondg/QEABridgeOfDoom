@@ -1,0 +1,3 @@
+[submodule "neatolibs"]
+	path = neatolibs
+	url = git@gitlab.com:solomondg/neatolibs.git
